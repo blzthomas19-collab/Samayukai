@@ -1,0 +1,824 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Samayukai Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: mural-lit frame around a plain white-and-black board, animal ring + game picker on the right, rulebook beneath. Single deliberate dark look. */
+:root{
+  --wall:#15100c;
+  --panel:#211913;
+  --line:#3a2c20;
+  --ivory:#efe3c8;
+  --muted:#a8967c;
+  --ochre:#d9a441;
+  --vermilion:#cf4a2e;
+  --sq-light:#f1ebdf;   /* white squares */
+  --sq-dark:#2b2622;    /* black squares */
+  --sq-mandala-l:#ddd3c0;
+  --sq-mandala-d:#403830;
+  --white-disc:#fbf8f2;
+  --white-ink:#1a1512;
+  --black-disc:#121010;
+  --black-ink:#f2ece0;
+  /* the five element colours: deep shade on white pieces, bright shade on black pieces */
+  --water:#1f6fb5;  --water-hi:#5cb3ff;
+  --air:#138a86;    --air-hi:#4fd6cf;
+  --fire:#c8331b;   --fire-hi:#ff6a45;
+  --earth:#3f7d2a;  --earth-hi:#86d15c;
+  --sky:#6a45b8;    --sky-hi:#b595ff;
+  --f-display:"Yatra One", "Georgia", serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{background:var(--wall);color:var(--ivory)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-bottom:1px solid var(--line);padding-bottom:14px}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(2rem,5vw,3.1rem);line-height:1;margin:0;color:var(--ochre)}
+h1 small{display:block;font-family:var(--f-body);font-size:.95rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:8px}
+
+.game{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.game{grid-template-columns:1fr}}
+
+.board-frame{position:relative;padding:clamp(6px,1.6vw,14px);background:repeating-linear-gradient(45deg,#3b1d12 0 6px,#2a130c 6px 12px);border-radius:6px;
+  box-shadow:0 0 0 2px var(--ochre),0 0 0 5px var(--wall),0 0 0 7px var(--vermilion),0 20px 50px -20px #000}
+.board-inner{display:grid;grid-template-columns:18px 1fr;grid-template-rows:1fr 18px;gap:4px}
+.ranks{display:grid;grid-template-rows:repeat(9,1fr);font:500 11px var(--f-mono);color:var(--ochre);text-align:center;align-items:center}
+.files{grid-column:2;display:grid;grid-template-columns:repeat(9,1fr);font:500 11px var(--f-mono);color:var(--ochre);text-align:center}
+.board{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);aspect-ratio:1;width:100%;max-width:100%;border:2px solid #1a0c07;user-select:none;touch-action:manipulation}
+.sq{position:relative;border:0;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;background:var(--sq-light);font:inherit;color:inherit;min-width:0}
+.sq.dark{background:var(--sq-dark)}
+.sq.mandala{background:var(--sq-mandala-l)}
+.sq.mandala.dark{background:var(--sq-mandala-d)}
+.sq.center{background:radial-gradient(circle,#ffffff 0 35%,#d9cfbd 85%)}
+.sq.center::before{content:"";position:absolute;inset:8%;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%237a2a12' stroke-width='1.3'%3E%3Ccircle cx='20' cy='20' r='4'/%3E%3Cpath d='M20 4c4 6 4 10 0 12-4-2-4-6 0-12zM20 36c4-6 4-10 0-12-4 2-4 6 0 12zM4 20c6-4 10-4 12 0-2 4-6 4-12 0zM36 20c-6-4-10-4-12 0 2 4 6 4 12 0zM8.7 8.7c7 1.5 9.5 4.5 8.5 8.5-4 1-7-1.5-8.5-8.5zM31.3 31.3c-7-1.5-9.5-4.5-8.5-8.5 4-1 7 1.5 8.5 8.5zM31.3 8.7c-1.5 7-4.5 9.5-8.5 8.5-1-4 1.5-7 8.5-8.5zM8.7 31.3c1.5-7 4.5-9.5 8.5-8.5 1 4-1.5 7-8.5 8.5z'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;opacity:.75;pointer-events:none}
+.sq.last::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 3px rgba(217,164,65,.85);pointer-events:none}
+.sq.sel{outline:3px solid var(--vermilion);outline-offset:-3px;z-index:1}
+.sq.check .pc{box-shadow:0 0 0 3px var(--vermilion),0 0 18px 4px var(--vermilion)}
+.sq .dot{position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(207,74,46,.85);pointer-events:none}
+.sq .ring{position:absolute;inset:6%;border-radius:50%;border:3px solid rgba(207,74,46,.9);pointer-events:none}
+.sq:focus-visible{outline:3px solid var(--ivory);outline-offset:-3px;z-index:2}
+
+/* pieces: white or black disc */
+.pc{--ec:var(--white-ink);width:82%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;z-index:1;transition:transform .15s;color:var(--ec)}
+.pc svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pc .fill{fill:currentColor;stroke:none}
+.pc.g{background:radial-gradient(circle at 35% 30%,#ffffff,var(--white-disc) 60%,#d9d4c9);box-shadow:inset 0 0 0 2px var(--ochre),0 2px 4px rgba(0,0,0,.45)}
+.pc.b{--ec:var(--black-ink);background:radial-gradient(circle at 35% 30%,#444,var(--black-disc) 65%);box-shadow:inset 0 0 0 2px #b9ab93,0 0 0 1px #6d5f4d,0 2px 4px rgba(0,0,0,.6)}
+.pc.pawn{width:64%}
+.pc.el{box-shadow:inset 0 0 0 3.5px var(--ec),0 2px 4px rgba(0,0,0,.5)}
+.pc.g.c-water{--ec:var(--water)} .pc.b.c-water{--ec:var(--water-hi)}
+.pc.g.c-air{--ec:var(--air)}     .pc.b.c-air{--ec:var(--air-hi)}
+.pc.g.c-fire{--ec:var(--fire)}   .pc.b.c-fire{--ec:var(--fire-hi)}
+.pc.g.c-earth{--ec:var(--earth)} .pc.b.c-earth{--ec:var(--earth-hi)}
+.pc.g.c-sky{--ec:var(--sky)}     .pc.b.c-sky{--ec:var(--sky-hi)}
+.swatches{display:flex;gap:6px;align-items:center}
+.swatches span{width:22px;height:22px;border-radius:50%;box-shadow:0 0 0 2px var(--wall),0 0 0 3px var(--line)}
+.sq.sel .pc{transform:scale(1.08)}
+@media (prefers-reduced-motion:reduce){.pc{transition:none}}
+
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.status{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.turn{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem}
+.chip{width:14px;height:14px;border-radius:50%;flex:none}
+.chip.g{background:var(--white-disc);box-shadow:0 0 0 2px var(--ochre)}
+.chip.b{background:var(--black-disc);box-shadow:0 0 0 2px #8a8a8a}
+.msg{color:var(--muted);min-height:1.5em}
+.msg.win{color:var(--ochre);font-family:var(--f-display);font-size:1.35rem;line-height:1.2}
+.goal{font-size:.9rem;color:var(--ivory);border-top:1px dashed var(--line);padding-top:6px}
+.goal b{color:var(--ochre);font-weight:500}
+.drawask{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px dashed var(--line);padding-top:8px}
+.drawask span{flex:1 1 100%;font-weight:500}
+
+.ring-panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.label{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.ringrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ringrow .who{width:56px;font-weight:500;font-size:.9rem}
+.w5{display:flex;gap:6px}
+.w5 .pc{width:32px}
+.w5 .pc.gone{opacity:.2;filter:grayscale(1)}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px}
+select,button.btn{font:500 .95rem var(--f-body);color:var(--ivory);background:#2c2119;border:1px solid #57412d;border-radius:4px;padding:8px 12px;cursor:pointer}
+button.btn:hover,select:hover{border-color:var(--ochre)}
+button.btn.primary{background:var(--vermilion);border-color:var(--vermilion);color:#fff4e6}
+button.btn:focus-visible,select:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+button.btn:disabled,select:disabled{opacity:.45;cursor:not-allowed}
+
+.players{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.players .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.players .count{font:500 .8rem var(--f-mono);color:var(--ochre)}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+.plist li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center}
+.plist img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#2c2119}
+.plist .pn{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist .ps{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist .rec{font:400 .78rem var(--f-mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:#5fb86a;margin-right:6px;box-shadow:0 0 0 2px rgba(95,184,106,.25);vertical-align:1px}
+.pnote{font-size:.8rem;color:var(--muted);margin:0}
+.log{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 16px;max-height:230px;overflow:auto}
+.log ol{margin:6px 0 0;padding-left:2.2em;font:400 .85rem/1.7 var(--f-mono);color:var(--ivory);font-variant-numeric:tabular-nums}
+.log li::marker{color:var(--muted)}
+.log .b-move{color:#c9b89c}
+.empty{color:var(--muted);font-style:italic;font-size:.9rem}
+
+.modal{position:fixed;inset:0;background:rgba(10,6,4,.72);display:grid;place-items:center;z-index:20;padding:16px}
+.modal-card{background:var(--panel);border:1px solid var(--ochre);border-radius:8px;padding:20px;max-width:400px;width:100%;display:flex;flex-direction:column;gap:12px}
+.modal-card h3{font-family:var(--f-display);font-weight:400;color:var(--ochre);margin:0;font-size:1.4rem}
+.modal-card p{margin:0;color:var(--muted)}
+.opts{display:flex;flex-wrap:wrap;gap:10px}
+.opt{display:flex;flex-direction:column;align-items:center;gap:4px;background:#2c2119;border:1px solid #57412d;border-radius:6px;padding:10px;cursor:pointer;color:var(--ivory);font:500 .85rem var(--f-body);width:78px}
+.opt .pc{width:40px}
+.opt:hover,.opt:focus-visible{border-color:var(--ochre);outline:none}
+
+.rules{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-direction:column;gap:24px}
+.rules h2{font-family:var(--f-display);font-weight:400;color:var(--ochre);font-size:1.8rem;margin:0;text-wrap:balance}
+.rules h3{font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:500}
+.lore{max-width:68ch;margin:0}
+.lore em{color:var(--ochre);font-style:normal}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.gcard{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.gcard b{color:var(--ochre);font-family:var(--f-display);font-weight:400;font-size:1.25rem}
+.gcard p{margin:0;font-size:.95rem}
+.gcard ul{margin:0;padding-left:1.1em;font-size:.9rem;color:var(--muted)}
+.gcard button{align-self:flex-start;margin-top:4px}
+.pieces{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px}
+.pcard{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:start}
+.pcard .names{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.pcard .names .pc{width:30px;flex:none}
+.pcard h4{margin:0;font-size:1.05rem;line-height:1.2}
+.pcard .tag{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pcard p{margin:4px 0 0;font-size:.9rem;color:var(--muted)}
+.mini{display:grid;grid-template-columns:repeat(7,1fr);width:92px;aspect-ratio:1;border:1px solid #1a0c07}
+.mini i{background:var(--sq-light);position:relative}
+.mini i:nth-child(even){background:var(--sq-dark)}
+.mini i.me{background:var(--ochre)}
+.mini i.mv::after{content:"";position:absolute;inset:28%;border-radius:50%;background:var(--vermilion)}
+.mini i.cap::after{content:"";position:absolute;inset:22%;border:2px solid var(--vermilion);border-radius:2px}
+footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:12px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Samayukai Chess<small>Five animals, five elements · White vs Black</small></h1>
+    <div class="swatches" aria-label="Element colours: sky violet, water blue, air teal, fire red, earth green"><span style="background:var(--sky)"></span><span style="background:var(--water)"></span><span style="background:var(--air)"></span><span style="background:var(--fire)"></span><span style="background:var(--earth)"></span></div>
+  </header>
+
+  <section class="game">
+    <div class="board-frame">
+      <div class="board-inner">
+        <div class="ranks" id="ranks" aria-hidden="true"></div>
+        <div class="board" id="board" role="grid" aria-label="Samayukai board, 9 by 9"></div>
+        <div class="files" id="files" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="status">
+        <div class="turn"><span class="chip g" id="turnChip"></span><span id="turnText">White to move</span></div>
+        <div class="msg" id="msg">Select a piece to see where it can go.</div>
+        <div class="goal" id="goal"></div>
+        <div class="drawask" id="drawAsk" hidden><span id="drawAskText"></span><button class="btn" id="drawYes">Accept draw</button><button class="btn" id="drawNo">Play on</button></div>
+      </div>
+
+      <div class="controls">
+        <div class="field"><label class="label" for="variant">Game</label>
+          <select id="variant">
+            <option value="classic">Samayukai Chess</option>
+            <option value="hunt">Animal Hunt</option>
+            <option value="lotus">Lotus Hold</option>
+          </select></div>
+        <div class="field"><label class="label" for="mode">Opponent</label>
+          <select id="mode"><option value="ai">Computer plays Black</option><option value="pvp">Two players, one screen</option></select></div>
+        <div class="field"><label class="label" for="level">Strength</label>
+          <select id="level"><option value="1">Easy</option><option value="2" selected>Normal</option><option value="3">Hard</option></select></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="undo">Undo</button>
+        <button class="btn" id="offer">Offer draw</button>
+        <button class="btn primary" id="newgame">New game</button>
+      </div>
+
+      <div class="ring-panel">
+        <div class="label">Great animals still on the board</div>
+        <div class="ringrow"><span class="who">White</span><div class="w5" id="ringG"></div></div>
+        <div class="ringrow"><span class="who">Black</span><div class="w5" id="ringB"></div></div>
+      </div>
+
+      <div class="players" id="playersBox">
+        <div class="row"><span class="label">Online now</span><span class="count" id="onlineCount">…</span></div>
+        <ul class="plist" id="onlineList"></ul>
+        <div class="row"><span class="label">All players</span><span class="count" id="rosterCount"></span></div>
+        <ul class="plist" id="rosterList"></ul>
+        <p class="pnote" id="playersNote">Connecting…</p>
+      </div>
+
+      <div class="log">
+        <div class="label">Move list</div>
+        <div id="logEmpty" class="empty">No moves yet. White moves first.</div>
+        <ol id="log"></ol>
+      </div>
+    </aside>
+  </section>
+
+  <section class="rules">
+    <h2>Three games on one mandala</h2>
+    <p class="lore">A 9×9 board with a shaded 3×3 <em>mandala</em> in the middle and the <em>lotus square</em> (e5) at its heart. Any piece except the King may stand on the lotus. Each side has a King, five great animals that each carry an element colour (Eagle: sky, violet · Rhino: water, blue · Owl: air, teal · Tiger: fire, red · Elephant: earth, green), two Chariots, two Horses and nine Soldiers. The animals are compact shapes that carve easily from one block of wood. Pieces move like chess unless their card says otherwise.</p>
+
+    <div>
+      <h3>Pick a game</h3>
+      <div class="games">
+        <div class="gcard"><b>Samayukai Chess</b><p>The main game.</p>
+          <ul><li>Win by checkmate.</li><li>The King may never step onto the lotus square, so it can't hide in the centre.</li></ul>
+          <button class="btn" data-play="classic">Play this</button></div>
+        <div class="gcard"><b>Animal Hunt</b><p>A race to capture the enemy's five great animals.</p>
+          <ul><li>Win by capturing all five enemy great animals (Eagle, Rhino, Owl, Tiger, Elephant).</li><li>Checkmate still wins too.</li><li>Soldiers bring captured animals back, so the hunt can swing.</li></ul>
+          <button class="btn" data-play="hunt">Play this</button></div>
+        <div class="gcard"><b>Lotus Hold</b><p>Hold the centre with any animal.</p>
+          <ul><li>Put any piece on the lotus square.</li><li>If it is still there when your next turn begins, you win.</li><li>Checkmate still wins. The King can't be the holder.</li></ul>
+          <button class="btn" data-play="lotus">Play this</button></div>
+      </div>
+    </div>
+
+    <div>
+      <h3>Soldier rebirth</h3>
+      <p class="lore">A Soldier that reaches the far rank turns into one of your <em>captured great animals</em>. If all five are still on the board, it becomes a Chariot. A Soldier may step two squares from its starting rank. There is no castling and no en passant. </p>
+    </div>
+
+    <div>
+      <h3>Draw rules</h3>
+      <div class="games">
+        <div class="gcard"><b>Stalemate</b><p>The player to move has no legal move and is not in check.</p></div>
+        <div class="gcard"><b>Threefold repetition</b><p>The same position, with the same player to move, appears for the third time.</p></div>
+        <div class="gcard"><b>100-move rule</b><p>100 half-moves (50 by each player) pass with no capture and no Soldier move.</p></div>
+        <div class="gcard"><b>Too few pieces</b><p>Neither side can checkmate: each has only a King, or a King and one Horse. In Lotus Hold this applies only when both sides have just a King, since any other piece can still hold the lotus.</p></div>
+        <div class="gcard"><b>Agreement</b><p>One player offers a draw and the other accepts. The computer accepts only when it is losing.</p></div>
+      </div>
+    </div>
+
+    <div>
+      <h3>The pieces</h3>
+      <div class="pieces" id="pieces"></div>
+    </div>
+    <footer>Samayukai Chess · three games for two players or one player against the computer.</footer>
+  </section>
+</div>
+
+<div class="modal" id="promo" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
+    <h3 id="promoTitle">Rebirth</h3>
+    <p>Your Soldier reached the far rank. Choose which captured animal comes back.</p>
+    <div class="opts" id="promoOpts"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+/* ============ ENGINE ============ */
+const P=1,Y=2,NG=3,E=4,F=5,V=6,W=7,A=8,K=9;
+const CENTER=40;
+const VAL=[0,100,300,480,420,560,640,720,950,0];
+const WEAPONS=[W,V,F,E,A];
+const BACK=[NG,Y,V,F,K,A,E,Y,W];
+const O4=[[1,0],[-1,0],[0,1],[0,-1]], D4=[[1,1],[1,-1],[-1,1],[-1,-1]], ALL8=O4.concat(D4);
+const KN=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+const sideOf=p=>p>10?1:0, typeOf=p=>p%10, inb=(r,c)=>r>=0&&r<9&&c>=0&&c<9;
+let VARIANT="classic";
+
+const INFO={
+  [K]:{n:"King",tag:"The king",col:null,move:"One step in any direction. Checkmate the King to win. It may never enter the lotus square."},
+  [A]:{n:"Eagle",tag:"Sky · violet",col:"sky",move:"Any distance in any straight line, like a chess queen."},
+  [W]:{n:"Rhino",tag:"Water · blue",col:"water",move:"Charges any distance along ranks and files, or turns one step diagonally."},
+  [V]:{n:"Owl",tag:"Air · teal",col:"air",move:"Any distance diagonally, or one step straight. Its head turns to watch the angles."},
+  [F]:{n:"Tiger",tag:"Fire · red",col:"fire",move:"Leaps like a knight, or one step in any direction."},
+  [E]:{n:"Elephant",tag:"Earth · green",col:"earth",move:"One or two squares in any straight line. Cannot jump."},
+  [NG]:{n:"Chariot",tag:"Like the rook",col:null,move:"Any distance along ranks and files, like a chess rook."},
+  [Y]:{n:"Horse",tag:"Like the knight",col:null,move:"Leaps in an L, like a chess knight. Jumps over pieces."},
+  [P]:{n:"Soldier",tag:"The pawn",col:null,move:"One step forward (two from its start). Captures one step diagonally forward."}
+};
+
+function initial(){
+  const b=new Array(81).fill(0);
+  for(let c=0;c<9;c++){b[c]=BACK[c];b[9+c]=P;b[63+c]=P+10;b[72+c]=BACK[c]+10;}
+  return b;
+}
+function fallen(b,side){const off=side*10;return WEAPONS.filter(t=>!b.includes(t+off));}
+function animalsLeft(b,side){return 5-fallen(b,side).length;}
+function gen(b,side,full){
+  const ms=[];
+  for(let s=0;s<81;s++){
+    const p=b[s]; if(!p||sideOf(p)!==side) continue;
+    const t=typeOf(p),r=(s/9)|0,c=s%9;
+    const add=(to)=>{const q=b[to];if(q&&sideOf(q)===side)return false;ms.push({f:s,t:to,p,c:q});return !q;};
+    const slide=(dirs,max)=>{for(const[dr,dc]of dirs){let rr=r+dr,cc=c+dc,d=1;while(d<=max&&inb(rr,cc)){if(!add(rr*9+cc))break;rr+=dr;cc+=dc;d++;}}};
+    const leap=(dirs)=>{for(const[dr,dc]of dirs){const rr=r+dr,cc=c+dc;if(inb(rr,cc))add(rr*9+cc);}};
+    switch(t){
+      case P:{
+        const dir=side===0?1:-1,start=side===0?1:7,last=side===0?8:0;
+        const push=(to,cap)=>{
+          if(((to/9)|0)===last){
+            let opts=fallen(b,side);if(!opts.length)opts=[NG];
+            if(!full)opts=[opts.reduce((x,y)=>VAL[y]>VAL[x]?y:x)];
+            for(const o of opts)ms.push({f:s,t:to,p,c:cap,pr:o});
+          }else ms.push({f:s,t:to,p,c:cap});
+        };
+        const r1=r+dir;
+        if(inb(r1,c)&&!b[r1*9+c]){push(r1*9+c,0);const r2=r+2*dir;if(r===start&&!b[r2*9+c])push(r2*9+c,0);}
+        for(const dc of[-1,1]){const cc=c+dc;if(inb(r1,cc)){const q=b[r1*9+cc];if(q&&sideOf(q)!==side)push(r1*9+cc,q);}}
+        break;}
+      case Y:leap(KN);break;
+      case NG:slide(O4,9);break;
+      case E:slide(ALL8,2);break;
+      case F:leap(KN);leap(ALL8);break;
+      case V:slide(D4,9);leap(O4);break;
+      case W:slide(O4,9);leap(D4);break;
+      case A:slide(ALL8,9);break;
+      case K:for(const[dr,dc]of ALL8){const rr=r+dr,cc=c+dc;if(inb(rr,cc)&&rr*9+cc!==CENTER)add(rr*9+cc);}break;
+    }
+  }
+  return ms;
+}
+function make(b,m){const nb=b.slice();nb[m.t]=m.pr?m.pr+sideOf(m.p)*10:m.p;nb[m.f]=0;return nb;}
+function attacked(b,sq,by){
+  const r=(sq/9)|0,c=sq%9;
+  for(const[dr,dc]of KN){const rr=r+dr,cc=c+dc;if(inb(rr,cc)){const p=b[rr*9+cc];if(p&&sideOf(p)===by){const t=typeOf(p);if(t===Y||t===F)return true;}}}
+  for(const[dr,dc]of ALL8){
+    const diag=dr!==0&&dc!==0;let rr=r+dr,cc=c+dc,d=1;
+    while(inb(rr,cc)){
+      const p=b[rr*9+cc];
+      if(p){
+        if(sideOf(p)===by){
+          const t=typeOf(p);
+          if(t===A)return true;
+          if(t===E&&d<=2)return true;
+          if(d===1&&(t===F||(t===K&&sq!==CENTER)))return true;
+          if(diag){
+            if(t===V)return true;
+            if(d===1&&t===W)return true;
+            if(d===1&&t===P){const pd=by===0?1:-1;if(rr+pd===r)return true;}
+          }else{
+            if(t===W||t===NG)return true;
+            if(d===1&&t===V)return true;
+          }
+        }
+        break;
+      }
+      rr+=dr;cc+=dc;d++;
+    }
+  }
+  return false;
+}
+function kingSq(b,side){return b.indexOf(K+side*10);}
+function inCheck(b,side){const k=kingSq(b,side);return k<0||attacked(b,k,1-side);}
+function legal(b,side,full){return gen(b,side,full).filter(m=>!inCheck(make(b,m),side));}
+
+/* variant helpers */
+const isKingWalk=m=>false; // the King may never enter the lotus square
+const huntWin=(nb,m,side)=>VARIANT==="hunt"&&m.c&&WEAPONS.includes(typeOf(m.c))&&animalsLeft(nb,1-side)===0;
+const lotusHeld=(b,side)=>VARIANT==="lotus"&&b[CENTER]&&sideOf(b[CENTER])===side;
+
+/* evaluation & search */
+const MATE=100000;
+function evalSide(b,side){
+  let s=0,npm=0;
+  for(let i=0;i<81;i++){const p=b[i];if(p&&typeOf(p)!==P&&typeOf(p)!==K)npm+=VAL[typeOf(p)];}
+  const eg=Math.max(0,1-npm/7000);
+  const mBonus=VARIANT==="lotus"?30:10;
+  for(let i=0;i<81;i++){
+    const p=b[i];if(!p)continue;
+    const t=typeOf(p),sd=sideOf(p),r=(i/9)|0,c=i%9;
+    let v=VAL[t];
+    const dc=Math.max(Math.abs(r-4),Math.abs(c-4));
+    if(t===P){v+=(sd===0?r-1:7-r)*7+(dc<=1?mBonus:0);}
+    else if(t===K){v+=(VARIANT==="lotus"?0:eg*(4-dc)*45) - (1-eg)*(sd===0?r:8-r)*12;}
+    else{v+=(4-dc)*5+(dc<=1?mBonus:0);}
+    if(VARIANT==="lotus"&&i===CENTER)v+=180;
+    s+=sd===side?v:-v;
+  }
+  if(VARIANT==="hunt"){
+    const mine=animalsLeft(b,side),theirs=animalsLeft(b,1-side);
+    s+=((5-theirs)**2-(5-mine)**2)*45;
+  }
+  return s;
+}
+function canAscend(b,side){
+  return false;
+  const k=kingSq(b,side);if(k<0)return false;
+  const r=(k/9)|0,c=k%9;
+  if(Math.max(Math.abs(r-4),Math.abs(c-4))!==1)return false;
+  const q=b[CENTER];if(q&&sideOf(q)===side)return false;
+  const nb=b.slice();nb[CENTER]=nb[k];nb[k]=0;
+  return !attacked(nb,CENTER,1-side);
+}
+let nodes=0,deadline=Infinity;
+class Timeout{}
+function order(ms){
+  for(const m of ms){m.o=(m.c?(typeOf(m.c)===K?1e6:VAL[typeOf(m.c)]*10-VAL[typeOf(m.p)]):0)+(m.pr?VAL[m.pr]:0)+(m.t===CENTER?(typeOf(m.p)===K?5e5:VARIANT==="lotus"?800:0):0);}
+  ms.sort((x,y)=>y.o-x.o);
+}
+function quiesce(b,side,alpha,beta,qd,ply){
+  if((++nodes&2047)===0&&Date.now()>deadline)throw new Timeout();
+  if(lotusHeld(b,side))return MATE-ply;
+  if(canAscend(b,side))return MATE-ply-1;
+  const stand=evalSide(b,side);
+  if(stand>=beta)return stand;
+  if(stand>alpha)alpha=stand;
+  if(qd>=4)return alpha;
+  const ms=gen(b,side,false).filter(m=>m.c||m.pr);order(ms);
+  for(const m of ms){
+    if(typeOf(m.c)===K)return MATE-ply;
+    const nb=make(b,m);
+    const sc=huntWin(nb,m,side)?MATE-ply-1:-quiesce(nb,1-side,-beta,-alpha,qd+1,ply+1);
+    if(sc>=beta)return sc;
+    if(sc>alpha)alpha=sc;
+  }
+  return alpha;
+}
+function search(b,side,depth,alpha,beta,ply){
+  if((++nodes&2047)===0&&Date.now()>deadline)throw new Timeout();
+  if(lotusHeld(b,side))return MATE-ply;
+  if(depth<=0)return quiesce(b,side,alpha,beta,0,ply);
+  const ms=gen(b,side,false);order(ms);
+  let best=-MATE*2;
+  for(const m of ms){
+    if(typeOf(m.c)===K)return MATE-ply;
+    const nb=make(b,m);
+    let sc;
+    if(isKingWalk(m)){
+      if(attacked(nb,CENTER,1-side))continue;
+      sc=MATE-ply-1;
+    }else if(huntWin(nb,m,side)){
+      if(inCheck(nb,side))continue;
+      sc=MATE-ply-1;
+    }else sc=-search(nb,1-side,depth-1,-beta,-alpha,ply+1);
+    if(sc>best)best=sc;
+    if(sc>alpha)alpha=sc;
+    if(alpha>=beta)break;
+  }
+  if(best===-MATE*2)return inCheck(b,side)?-(MATE-ply):0;
+  return best;
+}
+const posKey=(b,turn)=>b.join(",")+"|"+turn;
+function insufficient(b){
+  const left=[[],[]];
+  for(const p of b)if(p&&typeOf(p)!==K)left[sideOf(p)].push(typeOf(p));
+  if(VARIANT==="lotus")return !left[0].length&&!left[1].length;
+  return left.every(l=>l.length===0||(l.length===1&&l[0]===Y));
+}
+function chooseMove(b,side,level,rep){
+  const moves=legal(b,side,false);
+  if(!moves.length)return null;
+  for(const m of moves){if(isKingWalk(m)||huntWin(make(b,m),m,side))return m;}
+  const maxDepth=level===1?1:level===2?2:4;
+  deadline=Date.now()+(level===3?2800:1600);nodes=0;
+  let bestMove=moves[0],scored=null;
+  for(let d=1;d<=maxDepth;d++){
+    try{
+      const res=[];
+      order(moves);
+      if(scored)moves.sort((x,y)=>(scored.get(y)??-1e9)-(scored.get(x)??-1e9));
+      let alpha=-MATE*2;
+      for(const m of moves){
+        const sc=-search(make(b,m),1-side,d-1,-MATE*2,level===1?MATE*2:-alpha+10,1);
+        let sc2=sc;
+        if(rep&&(rep.get(posKey(make(b,m),1-side))||0)>=2&&sc<MATE-100)sc2=0; // would be a third repetition
+        res.push([m,sc2]);if(sc2>alpha)alpha=sc2;
+      }
+      scored=new Map(res);
+      res.sort((x,y)=>y[1]-x[1]);
+      const spread=level===1?120:8;
+      const top=res.filter(x=>x[1]>=res[0][1]-spread);
+      bestMove=top[Math.floor(Math.random()*top.length)][0];
+      if(res[0][1]>MATE-100)break;
+    }catch(e){if(e instanceof Timeout)break;throw e;}
+  }
+  return bestMove;
+}
+
+/* ============ ICONS ============ */
+const ICON={
+  [K]:'<path d="M4 18.5h16M5 18.5 4 9l4.5 3.5L12 5l3.5 7.5L20 9l-1 9.5"/><circle class="fill" cx="12" cy="3.6" r="1.3"/>',
+  [A]:'<path d="M2.5 10.5c3-1 5.5-.5 7 1.5L12 8l2.5 4c1.5-2 4-2.5 7-1.5-2.5 1-4 2.8-5 5l-2 .5L12 19l-2.5-3-2-.5c-1-2.2-2.5-4-5-5z"/>',
+  [W]:'<path d="M5.5 16.5V20M9 17v3M15 17v3M18 16.3V20"/><path d="M3 13.8c0-3.1 2.7-5.3 6.6-5.3h4.8c1.8 0 3 .8 3.9 2.1L20 7l.6 4.4c.8 1 .8 2.4-.1 3.3-.8.8-2 .9-3 .6-1.1 1.2-2.7 1.7-4.4 1.7H7.7C4.9 17 3 15.8 3 13.8z"/><path d="M14.6 8.6l.9-2"/><circle class="fill" cx="16.9" cy="11.4" r=".8"/>',
+  [V]:'<path d="M6 4.5l2.6 2.3h6.8L18 4.5V14a6 6 0 0 1-12 0z"/><circle cx="9.5" cy="10.5" r="2.1"/><circle cx="14.5" cy="10.5" r="2.1"/><path d="M11.2 13.6l.8 1.1.8-1.1M9 20.5l-1 1.5M15 20.5l1 1.5"/>',
+  [F]:'<path d="M5 9l2-4 2.5 2.5h5L17 5l2 4-1 5.5c-1 3.5-3.5 5.5-6 5.5s-5-2-6-5.5z"/><path d="M9.5 12h.01M14.5 12h.01M10.5 16l1.5 1 1.5-1"/>',
+  [E]:'<path d="M5 17V11c0-3.5 2.5-6 6-6h3c3 0 5 2.2 5 5v1c0 1.5-1 2.5-2.5 2.5V19M8 17v2M14 17v2M5 17h11"/><path d="M19 11c1.5.3 2 1.5 1.5 3"/><circle class="fill" cx="15.5" cy="9" r=".9"/>',
+  [NG]:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 4v6M12 14v6M4 12h6M14 12h6M6.3 6.3l4.3 4.3M13.4 13.4l4.3 4.3M17.7 6.3l-4.3 4.3M10.6 13.4l-4.3 4.3"/>',
+  [Y]:'<path d="M7 20.5h10l-1.5-5.5c2-1.3 3-3.6 2.3-6.5L14 3.5l-1.5 2-4 1.5-3.3 4.5 1.3 1.6 3.3-1.1c.8 2.2-.5 4.8-2.8 8.5z"/><circle class="fill" cx="12.8" cy="8.3" r=".9"/>',
+  [P]:'<circle cx="12" cy="7" r="3.2"/><path d="M6.5 20.5c0-4.2 2.4-7.2 5.5-7.2s5.5 3 5.5 7.2z"/>'
+};
+function pieceHTML(p,extra){
+  const t=typeOf(p),s=sideOf(p),inf=INFO[t];
+  const cls=`pc ${s?'b':'g'}${inf.col?' el c-'+inf.col:''}${t===P?' pawn':''}${extra?' '+extra:''}`;
+  return `<span class="${cls}" title="${s?'Black':'White'} ${inf.n}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[t]}</svg></span>`;
+}
+const FILES="abcdefghi";
+const sqName=i=>FILES[i%9]+(((i/9)|0)+1);
+const SIDE=["White","Black"];
+
+/* ============ UI STATE ============ */
+const $=id=>document.getElementById(id);
+let S, sel=-1, targets=[], thinking=false, aiTimer=null;
+let PL={db:null,user:null,room:null,me:null,roster:[],peers:[],status:""};
+function fresh(v){const b=initial();return {variant:v||$("variant").value,b,turn:0,half:0,last:null,log:[],over:null,hist:[],keys:[posKey(b,0)]};}
+function snap(){return {b:S.b.slice(),turn:S.turn,half:S.half,last:S.last,log:S.log.slice(),over:S.over,keys:S.keys.slice()};}
+
+function applyMove(m){
+  S.hist.push(snap());
+  const mover=S.turn;
+  let txt=`${INFO[typeOf(m.p)].n} ${sqName(m.f)}${m.c?'×':'–'}${sqName(m.t)}`;
+  if(m.pr)txt+=` → ${INFO[m.pr].n}`;
+  S.b=make(S.b,m);
+  S.half=(m.c||typeOf(m.p)===P)?0:S.half+1;
+  S.last={f:m.f,t:m.t};
+  S.turn=1-mover;
+  if(isKingWalk(m)){S.over={winner:mover,reason:"walk"};txt+=" ✦";}
+  else if(huntWin(S.b,m,mover)){S.over={winner:mover,reason:"hunt"};txt+=" ✦";}
+  else if(lotusHeld(S.b,S.turn)){S.over={winner:S.turn,reason:"lotus"};}
+  else{
+    const replies=legal(S.b,S.turn,false),chk=inCheck(S.b,S.turn);
+    if(!replies.length){
+      if(chk){S.over={winner:mover,reason:"checkmate"};txt+=" #";}
+      else S.over={winner:-1,reason:"stuck"};
+    }else if(chk)txt+=" +";
+    if(!S.over&&S.half>=100)S.over={winner:-1,reason:"quiet"};
+    if(!S.over&&insufficient(S.b))S.over={winner:-1,reason:"material"};
+  }
+  const k=posKey(S.b,S.turn);S.keys.push(k);
+  if(!S.over&&S.keys.filter(x=>x===k).length>=3)S.over={winner:-1,reason:"repeat"};
+  S.log.push({side:mover,txt});
+}
+
+/* ============ RENDER ============ */
+const boardEl=$("board");
+function buildBoard(){
+  let h="";
+  for(let r=8;r>=0;r--)for(let c=0;c<9;c++){
+    const i=r*9+c,dark=(r+c)%2===1,mand=Math.abs(r-4)<=1&&Math.abs(c-4)<=1;
+    h+=`<button class="sq${dark?' dark':''}${mand?' mandala':''}${i===CENTER?' center':''}" data-i="${i}" aria-label="${sqName(i)}"></button>`;
+  }
+  boardEl.innerHTML=h;
+  $("ranks").innerHTML=[9,8,7,6,5,4,3,2,1].map(n=>`<span>${n}</span>`).join("");
+  $("files").innerHTML=[...FILES].map(f=>`<span>${f}</span>`).join("");
+}
+const GOALS={
+  classic:"<b>Goal:</b> checkmate the enemy King. Kings may not enter the lotus square.",
+  hunt:"<b>Goal:</b> capture all five enemy animals, or checkmate.",
+  lotus:"<b>Goal:</b> keep any piece on the lotus square until your next turn, or checkmate."
+};
+function render(){
+  const chkSide=!S.over&&inCheck(S.b,S.turn)?S.turn:-1;
+  const ksq=chkSide>=0?kingSq(S.b,chkSide):-1;
+  const tset=new Set(targets.map(m=>m.t));
+  for(const el of boardEl.children){
+    const i=+el.dataset.i,p=S.b[i];
+    let h=p?pieceHTML(p):"";
+    if(tset.has(i))h+=S.b[i]?'<span class="ring"></span>':'<span class="dot"></span>';
+    el.innerHTML=h;
+    el.classList.toggle("sel",i===sel);
+    el.classList.toggle("last",!!S.last&&(i===S.last.f||i===S.last.t));
+    el.classList.toggle("check",i===ksq);
+    el.setAttribute("aria-label",sqName(i)+(p?` ${SIDE[sideOf(p)]} ${INFO[typeOf(p)].n}`:""));
+  }
+  const aiMode=$("mode").value==="ai";
+  $("turnChip").className="chip "+(S.turn?'b':'g');
+  $("goal").innerHTML=GOALS[S.variant];
+  const msg=$("msg");msg.classList.remove("win");
+  if(S.over){
+    $("turnText").textContent="Game over";
+    msg.classList.add("win");
+    const w=SIDE[S.over.winner];
+    msg.textContent={
+      
+      hunt:`${w} wins. All five enemy animals captured.`,
+      lotus:`${w} wins. The lotus square was held.`,
+      checkmate:`Checkmate. ${w} wins.`,
+      quiet:"Draw. 100 half-moves without a capture or Soldier move.",
+      stuck:"Draw by stalemate. No legal move left.",
+      repeat:"Draw by threefold repetition.",
+      material:"Draw. Neither side has enough pieces to win.",
+      agreed:"Draw by agreement."
+    }[S.over.reason];
+  }else{
+    $("turnText").textContent=S.turn===0?"White to move":(aiMode?"Black is thinking…":"Black to move");
+    if(thinking)msg.textContent="The computer is choosing a move.";
+    else if(chkSide>=0)msg.textContent=`${SIDE[chkSide]}'s King is in check.`;
+    else if(sel>=0){const p=S.b[sel];msg.textContent=`${INFO[typeOf(p)].n}: ${INFO[typeOf(p)].move}`;}
+    else if(S.variant==="lotus"&&S.b[CENTER])msg.textContent=`${SIDE[sideOf(S.b[CENTER])]} holds the lotus. ${SIDE[1-sideOf(S.b[CENTER])]} must remove it now.`;
+    else if(!S.log.length)msg.textContent="Select a piece to see where it can go.";
+    else msg.textContent="Last: "+S.log[S.log.length-1].txt;
+  }
+  for(const side of[0,1]){
+    $(side?"ringB":"ringG").innerHTML=WEAPONS.map(t=>pieceHTML(t+side*10,S.b.includes(t+side*10)?'':'gone')).join("");
+  }
+  const ol=$("log");$("logEmpty").hidden=S.log.length>0;
+  ol.innerHTML=S.log.map(l=>`<li class="${l.side?'b-move':''}">${l.txt}</li>`).join("");
+  ol.parentElement.scrollTop=ol.parentElement.scrollHeight;
+  $("undo").disabled=!S.hist.length||thinking;
+  $("offer").disabled=!!S.over||thinking||!humanTurn();
+  if(S.over)$("drawAsk").hidden=true;
+  $("level").disabled=!aiMode;
+  playersHook();
+}
+
+/* ============ INTERACTION ============ */
+function humanTurn(){return !S.over&&!thinking&&($("mode").value==="pvp"||S.turn===0);}
+boardEl.addEventListener("click",e=>{
+  const el=e.target.closest(".sq");if(!el||!humanTurn())return;
+  const i=+el.dataset.i,p=S.b[i];
+  const hit=targets.filter(m=>m.t===i);
+  if(sel>=0&&hit.length){
+    if(hit.length>1)return askPromotion(hit);
+    return doMove(hit[0]);
+  }
+  if(p&&sideOf(p)===S.turn&&i!==sel){sel=i;targets=legal(S.b,S.turn,true).filter(m=>m.f===i);}
+  else{sel=-1;targets=[];}
+  render();
+});
+function doMove(m){applyMove(m);sel=-1;targets=[];render();maybeAI();}
+function askPromotion(opts){
+  const box=$("promoOpts"),side=S.turn;
+  box.innerHTML=opts.map((m,k)=>`<button class="opt" data-k="${k}">${pieceHTML(m.pr+side*10)}<span>${INFO[m.pr].n}</span></button>`).join("");
+  $("promo").hidden=false;
+  box.querySelector("button").focus();
+  box.onclick=e=>{const b=e.target.closest(".opt");if(!b)return;$("promo").hidden=true;doMove(opts[+b.dataset.k]);};
+}
+function maybeAI(){
+  if(S.over||$("mode").value!=="ai"||S.turn!==1)return;
+  thinking=true;render();
+  const level=+$("level").value;
+  aiTimer=setTimeout(()=>{
+    VARIANT=S.variant;
+    const rep=new Map();for(const k of S.keys)rep.set(k,(rep.get(k)||0)+1);
+    const m=chooseMove(S.b,1,level,rep);
+    thinking=false;aiTimer=null;
+    if(m)applyMove(m);
+    render();
+  },60);
+}
+function newGame(v){
+  clearTimeout(aiTimer);thinking=false;$("drawAsk").hidden=true;
+  if(v)$("variant").value=v;
+  S=fresh();VARIANT=S.variant;sel=-1;targets=[];render();maybeAI();
+}
+$("newgame").addEventListener("click",()=>newGame());
+$("variant").addEventListener("change",()=>newGame());
+document.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>{newGame(b.dataset.play);window.scrollTo({top:0,behavior:"smooth"});}));
+$("undo").addEventListener("click",()=>{
+  if(thinking||!S.hist.length)return;
+  $("drawAsk").hidden=true;
+  const pop=()=>Object.assign(S,S.hist.pop());
+  pop();
+  if($("mode").value==="ai")while(S.turn===1&&S.hist.length)pop();
+  sel=-1;targets=[];render();maybeAI();
+});
+$("mode").addEventListener("change",()=>{sel=-1;targets=[];render();maybeAI();});
+$("offer").addEventListener("click",()=>{
+  if(S.over||!humanTurn())return;
+  if($("mode").value==="ai"){
+    VARIANT=S.variant;
+    const accepts=evalSide(S.b,1)<-150;
+    if(accepts){S.over={winner:-1,reason:"agreed"};S.log.push({side:0,txt:"Draw agreed"});}
+    else{$("msg").textContent="The computer declines the draw. Play on.";$("offer").disabled=true;return;}
+    render();return;
+  }
+  $("drawAskText").textContent=`${SIDE[S.turn]} offers a draw. ${SIDE[1-S.turn]}, do you accept?`;
+  $("drawAsk").hidden=false;
+});
+$("drawYes").addEventListener("click",()=>{$("drawAsk").hidden=true;if(S.over)return;S.over={winner:-1,reason:"agreed"};S.log.push({side:S.turn,txt:"Draw agreed"});render();});
+$("drawNo").addEventListener("click",()=>{$("drawAsk").hidden=true;$("msg").textContent="Draw declined. Play on.";});
+
+/* ============ RULEBOOK ============ */
+function mini(t){
+  const b=new Array(81).fill(0);
+  const pos=t===P?13:40; b[pos]=t;
+  const mv=new Set(gen(b,0,false).map(m=>m.t));
+  const caps=t===P?new Set([21,23]):new Set();
+  const r0=t===P?0:1;let h="";
+  for(let r=r0+6;r>=r0;r--)for(let c=1;c<=7;c++){
+    const i=r*9+c;
+    h+=`<i class="${i===pos?'me':mv.has(i)?'mv':caps.has(i)?'cap':''}"></i>`;
+  }
+  return `<div class="mini" aria-hidden="true">${h}</div>`;
+}
+$("pieces").innerHTML=[K,A,W,V,F,E,NG,Y,P].map(t=>{
+  const inf=INFO[t];
+  return `<div class="pcard">${mini(t)}<div><div class="names">${pieceHTML(t)}<div><div class="tag">${inf.tag}</div><h4>${inf.n}</h4></div></div><p>${inf.move}</p></div></div>`;
+}).join("");
+
+/* ============ PLAYERS: who is online, who has played ============ */
+const GAME_NAMES={classic:"Samayukai Chess",hunt:"Animal Hunt",lotus:"Lotus Hold"};
+function ago(ms){
+  const d=(Date.now()-ms)/1000;
+  if(d<60)return "just now";
+  if(d<3600)return Math.floor(d/60)+" min ago";
+  if(d<86400)return Math.floor(d/3600)+" h ago";
+  const days=Math.floor(d/86400);return days===1?"yesterday":days+" days ago";
+}
+function playersHook(){
+  if(!S)return;
+  // live status for the room
+  const st=S.over?`Finished ${GAME_NAMES[S.variant]}`:`${GAME_NAMES[S.variant]} · move ${Math.floor(S.log.length/2)+1}${$("mode").value==="ai"?" vs computer":""}`;
+  if(PL.room&&st!==PL.status){PL.status=st;PL.room.presence({status:st,id:PL.me}).catch(()=>{});}
+  if(S.over&&!S.recorded){S.recorded=true;recordResult();}
+}
+async function saveMe(fn){
+  if(!PL.db||!PL.me)return;
+  try{
+    const ref=PL.db.doc("players/"+PL.me);
+    const snap=await ref.get();
+    const cur=snap.exists?snap.data():{};
+    await ref.set(fn(cur));
+  }catch(e){
+    if(e&&e.code==="invalid_argument"){PL.db=null;setNote("Your games aren't being saved: this view can read the player list but not write to it.");}
+  }
+}
+function recordResult(){
+  const ai=$("mode").value==="ai",w=S.over.winner;
+  saveMe(c=>{
+    const n={...c,lastSeen:Date.now(),games:(c.games||0)+1};
+    if(ai){
+      if(w===0)n.wins=(c.wins||0)+1;else if(w===1)n.losses=(c.losses||0)+1;else n.draws=(c.draws||0)+1;
+    }
+    return n;
+  });
+}
+function setNote(t){$("playersNote").textContent=t;$("playersNote").hidden=!t;}
+function li(p,sub,rec,live){
+  const el=document.createElement("li");
+  const img=document.createElement("img");img.src=p.avatarUrl;img.alt="";
+  const mid=document.createElement("div");mid.style.minWidth="0";
+  const nm=document.createElement("div");nm.className="pn";
+  if(live){const d=document.createElement("span");d.className="live";nm.appendChild(d);}
+  nm.appendChild(document.createTextNode((p.name||"Someone")+(p.isMe?" (you)":"")));
+  const sb=document.createElement("div");sb.className="ps";sb.textContent=sub;
+  mid.append(nm,sb);
+  const r=document.createElement("div");r.className="rec";r.textContent=rec;
+  el.append(img,mid,r);return el;
+}
+async function renderPlayers(){
+  const u=PL.user;if(!u)return;
+  const peers=PL.peers.filter(p=>p.kind==="viewer");
+  const byId=new Map();let anon=0;
+  for(const p of peers){const id=p.by||(typeof p.presence.id==="string"?p.presence.id:null);if(id){if(!byId.has(id)||p.isMe)byId.set(id,p);}else anon++;}
+  const rosterIds=PL.roster.map(d=>d.id);
+  const ids=[...new Set([...byId.keys(),...rosterIds])];
+  const ps=ids.length?await u.profiles(ids):{};
+  const on=$("onlineList");on.textContent="";
+  for(const [id,p] of byId)on.appendChild(li(ps[id],String(p.presence.status||"Looking at the board"),"",true));
+  if(anon){const e=document.createElement("li");e.innerHTML='<span></span><div class="ps"></div><span></span>';e.children[1].textContent=`${anon} more viewer${anon>1?"s":""} without a name`;on.appendChild(e);}
+  const total=byId.size+anon;
+  $("onlineCount").textContent=PL.room?`${total} online`:"—";
+  const ro=$("rosterList");ro.textContent="";
+  for(const d of PL.roster){
+    const x=d.data;
+    const rec=`${x.games||0} games · ${x.wins||0}W ${x.losses||0}L ${x.draws||0}D`;
+    ro.appendChild(li(ps[d.id],"Last seen "+ago(x.lastSeen||x.firstSeen||Date.now())+` · ${x.visits||1} visit${(x.visits||1)>1?"s":""}`,rec,byId.has(d.id)));
+  }
+  $("rosterCount").textContent=PL.db?`${PL.roster.length} player${PL.roster.length===1?"":"s"}`:"";
+}
+async function initPlayers(){
+  const use=window.claude?.use?(n=>window.claude.use(n)):null;
+  if(!use){setNote("Open this page on claude.ai to see who is playing.");$("onlineCount").textContent="—";return;}
+  const [user,db,room]=await Promise.all([use("user"),use("db"),use("room")]);
+  PL.user=user;PL.db=db;PL.room=room;
+  PL.me=user?await user.id():null;
+  const notes=[];
+  if(!user||!PL.me)notes.push("Sign in to claude.ai to appear in the player list.");
+  if(room){
+    room.onPeers(ch=>{PL.peers=ch.peers;renderPlayers();});
+    PL.status="";playersHook();
+  }
+  if(db){
+    db.collection("players").orderBy("lastSeen","desc").limit(50).onSnapshot(q=>{
+      PL.roster=q.docs.filter(d=>d.exists).map(d=>({id:d.id,data:d.data()||{}}));renderPlayers();
+    },()=>{});
+    if(PL.me){
+      await saveMe(c=>({...c,firstSeen:c.firstSeen||Date.now(),lastSeen:Date.now(),visits:(c.visits||0)+1}));
+    }
+  }else notes.push("The all-time player list isn't available in this view.");
+  setNote(notes.join(" "));
+  renderPlayers();
+  setInterval(renderPlayers,60000); // refresh "last seen" times
+}
+
+/* ============ BOOT ============ */
+buildBoard();
+function start(data){
+  if(data&&data.mode)$("mode").value=data.mode;
+  if(data&&data.level)$("level").value=data.level;
+  if(data&&data.S&&data.S.variant&&data.S.keys){S=data.S;$("variant").value=S.variant;}else S=fresh();
+  VARIANT=S.variant;
+  render();maybeAI();
+}
+window.claude?.hot?.snapshot?.(()=>({S,mode:$("mode").value,level:$("level").value}));
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+initPlayers();
+})();
+</script>
+
+</body></html>
